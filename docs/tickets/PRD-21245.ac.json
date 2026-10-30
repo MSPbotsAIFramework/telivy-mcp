@@ -1,0 +1,219 @@
+[
+  {
+    "id": "TC-TLV-001",
+    "ac": "AC1",
+    "type": "auto",
+    "text": "Given a tenant's Telivy API key, When telivy_list_external_scans is called with no filters, Then it returns a bounded page of that tenant's scans plus a total count.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_001_list_external_scans_default"],
+    "result": "pass",
+    "evidence": "pytest node above passed (see commit's Self-test section for the full `uv run pytest -v` run, 48 passed)."
+  },
+  {
+    "id": "TC-TLV-002",
+    "ac": "AC2",
+    "type": "auto",
+    "text": "Given the same, When telivy_list_external_scans is called with search/sort_by/sort_order/agency_id, Then the returned page reflects those filters.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_002_list_external_scans_filters"],
+    "result": "pass",
+    "evidence": "pytest node above passed; asserts search/assessmentSortBy/sortOrder/agencyId all reach the upstream call unchanged."
+  },
+  {
+    "id": "TC-TLV-003",
+    "ac": "AC3",
+    "type": "auto",
+    "text": "Given a tenant with zero external scans, When telivy_list_external_scans is called, Then it returns an empty list and total=0, not an error.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_003_list_external_scans_empty_tenant"],
+    "result": "pass",
+    "evidence": "pytest node above passed.",
+    "notes": "exception/boundary: empty result must not be mistaken for not_found"
+  },
+  {
+    "id": "TC-TLV-004",
+    "ac": "AC4",
+    "type": "auto",
+    "text": "Given a valid scan id, When telivy_get_external_scan is called, Then it returns that scan's full detail.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_004_get_external_scan_detail"],
+    "result": "pass",
+    "evidence": "pytest node above passed."
+  },
+  {
+    "id": "TC-TLV-005",
+    "ac": "AC5",
+    "type": "auto",
+    "text": "Given a scan id that does not exist or belongs to another tenant's key, When telivy_get_external_scan is called, Then it returns {\"error\":{\"code\":\"not_found\"}}, not another tenant's data and not a raw exception.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_005_get_external_scan_not_found"],
+    "result": "pass",
+    "evidence": "pytest node above passed; asserts the exact envelope shape, no exception escapes the tool.",
+    "notes": "exception/boundary"
+  },
+  {
+    "id": "TC-TLV-006",
+    "ac": "AC6",
+    "type": "auto",
+    "text": "Given a valid scan id, When telivy_get_external_scan_findings is called without a slug, Then it returns a findings summary list; When called with a slug, Then it returns that finding's full detail for the scan.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_006_scan_findings_with_and_without_slug"],
+    "result": "pass",
+    "evidence": "pytest node above passed; asserts both the summary-list path and the slug-detail path hit distinct upstream URLs."
+  },
+  {
+    "id": "TC-TLV-007",
+    "ac": "AC7",
+    "type": "auto",
+    "text": "Given a valid scan id, When telivy_get_external_scan_breach_data is called, Then it returns the scan's breach records, or an empty list when none exist (not an error).",
+    "tests": ["tests/test_tools.py::test_tc_tlv_007_breach_data_empty_is_not_an_error"],
+    "result": "pass",
+    "evidence": "pytest node above passed."
+  },
+  {
+    "id": "TC-TLV-008",
+    "ac": "AC8",
+    "type": "auto",
+    "text": "Given a tenant's Telivy API key, When telivy_list_risk_assessments is called with search/scan_status/sort/paging, Then it returns a filtered, bounded page plus a total count.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_008_list_risk_assessments_filtered"],
+    "result": "pass",
+    "evidence": "pytest node above passed."
+  },
+  {
+    "id": "TC-TLV-009",
+    "ac": "AC9",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_get_risk_assessment and telivy_get_risk_assessment_scan_status are both called, Then each reflects the assessment's current state, with scan-status being the lighter call.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_009_assessment_detail_and_scan_status"],
+    "result": "pass",
+    "evidence": "pytest node above passed."
+  },
+  {
+    "id": "TC-TLV-010",
+    "ac": "AC10",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_list_risk_assessment_devices is called with no device_id, Then it returns the device list; When called with a device_id, Then it returns that device's detail.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_010_devices_list_and_detail"],
+    "result": "pass",
+    "evidence": "pytest node above passed."
+  },
+  {
+    "id": "TC-TLV-011",
+    "ac": "AC11",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_get_risk_assessment_findings is called, Then it returns the assessment's device-level findings array.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_011_assessment_device_findings"],
+    "result": "pass",
+    "evidence": "pytest node above passed."
+  },
+  {
+    "id": "TC-TLV-012",
+    "ac": "AC12",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_get_risk_assessment_pii_summary is called, Then it returns the assessment's PII-exposure summary.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_012_pii_summary"],
+    "result": "pass",
+    "evidence": "pytest node above passed."
+  },
+  {
+    "id": "TC-TLV-013",
+    "ac": "AC13",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_get_risk_assessment_directory_users is called with provider=m365 and separately with provider=google_workspace, Then each call returns that provider's user-exposure data.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_013_directory_users_both_providers"],
+    "result": "pass",
+    "evidence": "pytest node above passed; asserts the two providers route to distinct upstream paths (m365-users / gws-users)."
+  },
+  {
+    "id": "TC-TLV-014",
+    "ac": "AC13",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_get_risk_assessment_directory_users is called with an unrecognized provider value, Then it returns {\"error\":{\"code\":\"invalid_argument\"}}.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_014_directory_users_invalid_provider"],
+    "result": "pass",
+    "evidence": "pytest node above passed; also asserts Telivy is never called for a request already known to be malformed.",
+    "notes": "exception/boundary. Implementation note: provider is typed str (not a pydantic Literal) specifically so this validation runs inside the tool and returns our own error envelope, rather than being rejected by FastMCP's schema validation before the tool body runs (which would not match this AC's documented envelope shape)."
+  },
+  {
+    "id": "TC-TLV-015",
+    "ac": "AC14",
+    "type": "auto",
+    "text": "Given any finding slug, When telivy_get_finding_reference is called, Then it returns that finding type's general definition, independent of any scan/assessment instance.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_015_finding_reference"],
+    "result": "pass",
+    "evidence": "pytest node above passed."
+  },
+  {
+    "id": "TC-TLV-016",
+    "ac": "AC15",
+    "type": "auto",
+    "text": "Given a scan or assessment id, When telivy_get_risk_progress_report is called with only current_timestamp_group, Then it returns a single snapshot; When called with both timestamp groups, Then it returns the comparison.",
+    "tests": ["tests/test_tools.py::test_tc_tlv_016_risk_progress_report"],
+    "result": "pass",
+    "evidence": "pytest node above passed."
+  },
+  {
+    "id": "TC-TLV-017",
+    "ac": "AC16",
+    "type": "auto",
+    "text": "Given a /mcp request missing the X-Telivy-Api-Key header, When any tool is invoked, Then the service returns HTTP 401 naming the missing header, and the mocked Telivy endpoint is never called.",
+    "tests": ["tests/test_middleware.py::test_missing_header_returns_401_with_required_headers_listed"],
+    "result": "pass",
+    "evidence": "pytest node above passed. Also verified live: `curl -X POST http://localhost:8080/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}'` (no credential header) against the running server returned `HTTP/1.1 401 Unauthorized` with body `{\"error\":\"Missing credentials\",\"message\":\"This server requires the X-Telivy-Api-Key header\",\"required_headers\":[\"X-Telivy-Api-Key\"],\"optional_headers\":[]}` -- the middleware 401s before the MCP method dispatcher runs, so no tool (and no outbound Telivy call) is ever reached.",
+    "notes": "exception/boundary, permission"
+  },
+  {
+    "id": "TC-TLV-018",
+    "ac": "AC17",
+    "type": "auto",
+    "text": "Given two concurrent requests carrying two different tenants' API keys, When each calls telivy_list_external_scans at the same time, Then each receives only its own tenant's data, with no cross-contamination from shared state.",
+    "tests": [
+      "tests/test_middleware.py::test_concurrent_requests_do_not_cross_contaminate_credentials",
+      "tests/test_tools.py::test_tc_tlv_018_client_factory_is_context_scoped"
+    ],
+    "result": "pass",
+    "evidence": "Both pytest nodes above passed. The middleware test interleaves two asyncio tasks carrying different X-Telivy-Api-Key values through GatewayTokenMiddleware and asserts each task's handler sees only its own key via the contextvar; the tools test confirms get_client_from_context() builds a fresh TelivyClient scoped to whatever key is in context at call time, with no module-level cache.",
+    "notes": "exception/boundary, multi-tenant isolation, hits the request-handling layer (not just UI/gating)"
+  },
+  {
+    "id": "TC-TLV-019",
+    "ac": "AC18",
+    "type": "auto",
+    "text": "Given Telivy returns 404 / 429 / a 5xx-or-timeout for an upstream call, When the tool maps the response, Then it returns {\"error\":{\"code\":\"not_found\"|\"rate_limited\"|\"upstream_error\", \"retryable\": ...}} with the correct retryable value and no raw upstream body or credential in the message.",
+    "tests": [
+      "tests/test_api_client.py::test_classify_matches_sop_vocabulary",
+      "tests/test_api_client.py::test_404_maps_to_not_found_and_does_not_leak_raw_body",
+      "tests/test_api_client.py::test_429_retries_and_eventually_succeeds",
+      "tests/test_api_client.py::test_429_exhausts_retries_and_raises_rate_limited",
+      "tests/test_api_client.py::test_network_error_maps_to_upstream_error_retryable",
+      "tests/test_api_client.py::test_non_json_body_does_not_leak_raw_body",
+      "tests/test_api_client.py::test_json_body_without_message_or_error_key_does_not_leak_raw_body"
+    ],
+    "result": "pass",
+    "evidence": "All pytest nodes above passed (status-to-code/retryable mapping parametrized over 400/401/403/404/422/429/500/503; a 404 response with extra fields like internal_trace_id and another tenant's domain name is confirmed absent from the resulting envelope; a transient 429 is retried and succeeds; a persistent 429 and a simulated httpx.ConnectError both raise the correctly-classified TelivyError). Review round 1 must-fix 1 closed two previously-untested fallback paths in _raise_for_status (a non-JSON error body, and a JSON error body without a \"message\"/\"error\" string field, e.g. FastAPI-style {\"detail\": [...]}) that used to leak the raw upstream body verbatim; both now fall back to a fixed generic message per status class and are covered by the two tests just added.",
+    "notes": "exception/boundary, three sub-cases (404/429/5xx) covered by a parametrized test module plus dedicated retry/network-error tests"
+  },
+  {
+    "id": "TC-TLV-020",
+    "ac": "AC19",
+    "type": "auto",
+    "text": "Given a list tool is called with no limit or a limit above the hard cap, When the response is built, Then the effective page size is clamped (default <=50, hard cap <=200); if the result would exceed the 20,000-character budget, Then the tool truncates and sets has_more=true instead of erroring or silently dropping data.",
+    "tests": [
+      "tests/test_tools.py::test_tc_tlv_020_clamp_limit",
+      "tests/test_tools.py::test_tc_tlv_020_list_tool_sends_clamped_limit",
+      "tests/test_tools.py::test_tc_tlv_020_dump_json_capped_truncates_with_has_more",
+      "tests/test_tools.py::test_tc_tlv_020_dump_json_capped_passthrough_when_small"
+    ],
+    "result": "pass",
+    "evidence": "All pytest nodes above passed: clamp_limit is parametrized over None/1/50/200/201/100000 -> 50/1/50/200/200/200; a tool call with limit=5000 is confirmed to send limit=200 upstream (never Telivy's own 100 default, never the caller's 5000); dump_json_capped on a 1000-item payload with a 2000-char budget truncates to under the budget with truncated=true, has_more=true, and the true original_count preserved, while a small payload passes through byte-for-byte.",
+    "notes": "exception/boundary, token economy"
+  },
+  {
+    "id": "TC-TLV-021",
+    "ac": "AC1",
+    "type": "manual",
+    "text": "Against a live Telivy API key, initialize -> tools/list -> telivy_list_external_scans returns that account's real scan list end-to-end.",
+    "steps": [
+      "Obtain a real Telivy Security API key (sandbox or production) for a test account.",
+      "Start the telivy-mcp service locally with that key in the X-Telivy-Api-Key header.",
+      "POST /mcp with method=initialize, then method=tools/list, then method=tools/call for telivy_list_external_scans with no arguments."
+    ],
+    "expect": "tools/list shows all 13 tools; the tools/call response contains the account's real external-scan list (or an empty list if the account has none) with no error envelope.",
+    "result": "untested",
+    "notes": "needs a real vendor account -- not run yet, no test account available. Does not block merge or INT publish per the vendor-mcp SOP's completion criteria. Partial evidence: initialize/tools/list/tools/call were exercised locally with a placeholder key (not a real account) and the full RPC round-trip (including the 401 missing-header path and a correctly-classified unauthorized error for an invalid key) worked end-to-end over the network against the real Telivy API -- see docs/tickets/PRD-21245.md Self-test for the exact commands and responses. What remains unverified is specifically a *valid* key returning real scan data."
+  }
+]
