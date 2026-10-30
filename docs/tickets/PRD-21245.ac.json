@@ -179,10 +179,12 @@
       "tests/test_api_client.py::test_404_maps_to_not_found_and_does_not_leak_raw_body",
       "tests/test_api_client.py::test_429_retries_and_eventually_succeeds",
       "tests/test_api_client.py::test_429_exhausts_retries_and_raises_rate_limited",
-      "tests/test_api_client.py::test_network_error_maps_to_upstream_error_retryable"
+      "tests/test_api_client.py::test_network_error_maps_to_upstream_error_retryable",
+      "tests/test_api_client.py::test_non_json_body_does_not_leak_raw_body",
+      "tests/test_api_client.py::test_json_body_without_message_or_error_key_does_not_leak_raw_body"
     ],
     "result": "pass",
-    "evidence": "All pytest nodes above passed (status-to-code/retryable mapping parametrized over 400/401/403/404/422/429/500/503; a 404 response with extra fields like internal_trace_id and another tenant's domain name is confirmed absent from the resulting envelope; a transient 429 is retried and succeeds; a persistent 429 and a simulated httpx.ConnectError both raise the correctly-classified TelivyError).",
+    "evidence": "All pytest nodes above passed (status-to-code/retryable mapping parametrized over 400/401/403/404/422/429/500/503; a 404 response with extra fields like internal_trace_id and another tenant's domain name is confirmed absent from the resulting envelope; a transient 429 is retried and succeeds; a persistent 429 and a simulated httpx.ConnectError both raise the correctly-classified TelivyError). Review round 1 must-fix 1 closed two previously-untested fallback paths in _raise_for_status (a non-JSON error body, and a JSON error body without a \"message\"/\"error\" string field, e.g. FastAPI-style {\"detail\": [...]}) that used to leak the raw upstream body verbatim; both now fall back to a fixed generic message per status class and are covered by the two tests just added.",
     "notes": "exception/boundary, three sub-cases (404/429/5xx) covered by a parametrized test module plus dedicated retry/network-error tests"
   },
   {

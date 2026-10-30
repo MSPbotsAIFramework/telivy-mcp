@@ -83,6 +83,60 @@ async def test_404_maps_to_not_found_and_does_not_leak_raw_body(_no_real_sleep):
     assert "tenant-secret-key" not in envelope
 
 
+@pytest.mark.asyncio
+async def test_non_json_body_does_not_leak_raw_body(_no_real_sleep):
+    # PRD-21245 review round 1, must-fix 1: a non-JSON (e.g. HTML) error body
+    # must never reach the tool-facing message verbatim.
+    raw = (
+        "<html><body>Upstream internal trace: req-9f3a-secret-session-xyz, "
+        "backend 10.0.4.17 timed out</body></html>"
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(502, content=raw, headers={"content-type": "text/html"})
+
+    _install_transport(handler)
+    client = TelivyClient("tenant-secret-key")
+
+    with pytest.raises(TelivyError) as exc_info:
+        await client.get("/api/v1/security/external-scans")
+
+    envelope = exc_info.value.to_envelope()
+    assert '"code":"upstream_error"' in envelope
+    assert '"retryable":true' in envelope
+    assert "req-9f3a-secret-session-xyz" not in envelope
+    assert "10.0.4.17" not in envelope
+
+
+@pytest.mark.asyncio
+async def test_json_body_without_message_or_error_key_does_not_leak_raw_body(_no_real_sleep):
+    # PRD-21245 review round 1, must-fix 1: a JSON body shaped like
+    # FastAPI-style validation errors (no "message"/"error" string field)
+    # must fall back to a fixed generic message, not str(detail).
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            422,
+            json={
+                "detail": [
+                    {"loc": ["query", "limit"], "msg": "value is not a valid integer"}
+                ],
+                "internal_trace_id": "trace-zzz",
+            },
+        )
+
+    _install_transport(handler)
+    client = TelivyClient("tenant-secret-key")
+
+    with pytest.raises(TelivyError) as exc_info:
+        await client.get("/api/v1/security/external-scans")
+
+    envelope = exc_info.value.to_envelope()
+    assert '"code":"invalid_argument"' in envelope
+    assert '"retryable":false' in envelope
+    assert "trace-zzz" not in envelope
+    assert "value is not a valid integer" not in envelope
+
+
 @pytest.mark.parametrize(
     "status,expected_code,expected_retryable",
     [

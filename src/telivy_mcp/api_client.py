@@ -47,6 +47,19 @@ def _classify(status_code: int) -> tuple[str, bool]:
     return "invalid_argument", False
 
 
+# Fixed, generic fallback messages per error code (PRD-21245 review round 1,
+# must-fix 1). Used whenever the upstream body doesn't yield a trustworthy
+# string "message"/"error" field, so the raw body never reaches the agent.
+_GENERIC_ERROR_MESSAGE: dict[str | None, str] = {
+    "invalid_argument": "Telivy rejected the request as invalid.",
+    "unauthorized": "Telivy rejected the request as unauthorized.",
+    "not_found": "The requested Telivy resource was not found.",
+    "rate_limited": "Telivy is rate-limiting requests.",
+    "upstream_error": "Telivy returned an upstream error.",
+    None: "Telivy returned an error.",
+}
+
+
 class TelivyError(Exception):
     def __init__(self, status_code: int, message: str):
         self.status_code = status_code
@@ -143,12 +156,25 @@ class TelivyClient:
 
     def _raise_for_status(self, resp: httpx.Response) -> None:
         if resp.status_code >= 400:
-            try:
-                detail = resp.json()
-                if isinstance(detail, dict):
-                    msg = detail.get("message") or detail.get("error") or str(detail)
-                else:
-                    msg = str(detail)
-            except ValueError:
-                msg = resp.text
-            raise TelivyError(resp.status_code, msg)
+            raise TelivyError(resp.status_code, self._safe_error_message(resp))
+
+    def _safe_error_message(self, resp: httpx.Response) -> str:
+        # PRD-21245 review round 1, must-fix 1: never let the raw upstream
+        # body (which may carry another tenant's data, an internal trace id,
+        # or infra details) reach the tool-facing message (AC18). Only a
+        # string "message"/"error" field from a parsed JSON body is trusted
+        # verbatim; anything else (non-JSON body, or a JSON body without
+        # one of those string fields, e.g. FastAPI-style {"detail": [...]})
+        # falls back to a fixed, generic message per status class.
+        code, _ = _classify(resp.status_code)
+        generic = _GENERIC_ERROR_MESSAGE.get(code, _GENERIC_ERROR_MESSAGE[None])
+        try:
+            detail = resp.json()
+        except ValueError:
+            return generic
+        if isinstance(detail, dict):
+            for key in ("message", "error"):
+                value = detail.get(key)
+                if isinstance(value, str) and value:
+                    return value
+        return generic
