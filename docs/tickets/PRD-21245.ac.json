@@ -1,0 +1,163 @@
+[
+  {
+    "id": "TC-TLV-001",
+    "ac": "AC1",
+    "type": "auto",
+    "text": "Given a tenant's Telivy API key, When telivy_list_external_scans is called with no filters, Then it returns a bounded page of that tenant's scans plus a total count.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-002",
+    "ac": "AC2",
+    "type": "auto",
+    "text": "Given the same, When telivy_list_external_scans is called with search/sort_by/sort_order/agency_id, Then the returned page reflects those filters.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-003",
+    "ac": "AC3",
+    "type": "auto",
+    "text": "Given a tenant with zero external scans, When telivy_list_external_scans is called, Then it returns an empty list and total=0, not an error.",
+    "tests": [],
+    "notes": "exception/boundary: empty result must not be mistaken for not_found"
+  },
+  {
+    "id": "TC-TLV-004",
+    "ac": "AC4",
+    "type": "auto",
+    "text": "Given a valid scan id, When telivy_get_external_scan is called, Then it returns that scan's full detail.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-005",
+    "ac": "AC5",
+    "type": "auto",
+    "text": "Given a scan id that does not exist or belongs to another tenant's key, When telivy_get_external_scan is called, Then it returns {\"error\":{\"code\":\"not_found\"}}, not another tenant's data and not a raw exception.",
+    "tests": [],
+    "notes": "exception/boundary"
+  },
+  {
+    "id": "TC-TLV-006",
+    "ac": "AC6",
+    "type": "auto",
+    "text": "Given a valid scan id, When telivy_get_external_scan_findings is called without a slug, Then it returns a findings summary list; When called with a slug, Then it returns that finding's full detail for the scan.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-007",
+    "ac": "AC7",
+    "type": "auto",
+    "text": "Given a valid scan id, When telivy_get_external_scan_breach_data is called, Then it returns the scan's breach records, or an empty list when none exist (not an error).",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-008",
+    "ac": "AC8",
+    "type": "auto",
+    "text": "Given a tenant's Telivy API key, When telivy_list_risk_assessments is called with search/scan_status/sort/paging, Then it returns a filtered, bounded page plus a total count.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-009",
+    "ac": "AC9",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_get_risk_assessment and telivy_get_risk_assessment_scan_status are both called, Then each reflects the assessment's current state, with scan-status being the lighter call.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-010",
+    "ac": "AC10",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_list_risk_assessment_devices is called with no device_id, Then it returns the device list; When called with a device_id, Then it returns that device's detail.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-011",
+    "ac": "AC11",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_get_risk_assessment_findings is called, Then it returns the assessment's device-level findings array.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-012",
+    "ac": "AC12",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_get_risk_assessment_pii_summary is called, Then it returns the assessment's PII-exposure summary.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-013",
+    "ac": "AC13",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_get_risk_assessment_directory_users is called with provider=m365 and separately with provider=google_workspace, Then each call returns that provider's user-exposure data.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-014",
+    "ac": "AC13",
+    "type": "auto",
+    "text": "Given a valid assessment id, When telivy_get_risk_assessment_directory_users is called with an unrecognized provider value, Then it returns {\"error\":{\"code\":\"invalid_argument\"}}.",
+    "tests": [],
+    "notes": "exception/boundary"
+  },
+  {
+    "id": "TC-TLV-015",
+    "ac": "AC14",
+    "type": "auto",
+    "text": "Given any finding slug, When telivy_get_finding_reference is called, Then it returns that finding type's general definition, independent of any scan/assessment instance.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-016",
+    "ac": "AC15",
+    "type": "auto",
+    "text": "Given a scan or assessment id, When telivy_get_risk_progress_report is called with only current_timestamp_group, Then it returns a single snapshot; When called with both timestamp groups, Then it returns the comparison.",
+    "tests": []
+  },
+  {
+    "id": "TC-TLV-017",
+    "ac": "AC16",
+    "type": "auto",
+    "text": "Given a /mcp request missing the X-Telivy-Api-Key header, When any tool is invoked, Then the service returns HTTP 401 naming the missing header, and the mocked Telivy endpoint is never called.",
+    "tests": [],
+    "notes": "exception/boundary, permission"
+  },
+  {
+    "id": "TC-TLV-018",
+    "ac": "AC17",
+    "type": "auto",
+    "text": "Given two concurrent requests carrying two different tenants' API keys, When each calls telivy_list_external_scans at the same time, Then each receives only its own tenant's data, with no cross-contamination from shared state.",
+    "tests": [],
+    "notes": "exception/boundary, multi-tenant isolation, hits the request-handling layer (not just UI/gating)"
+  },
+  {
+    "id": "TC-TLV-019",
+    "ac": "AC18",
+    "type": "auto",
+    "text": "Given Telivy returns 404 / 429 / a 5xx-or-timeout for an upstream call, When the tool maps the response, Then it returns {\"error\":{\"code\":\"not_found\"|\"rate_limited\"|\"upstream_error\", \"retryable\": ...}} with the correct retryable value and no raw upstream body or credential in the message.",
+    "tests": [],
+    "notes": "exception/boundary, three sub-cases (404/429/5xx) covered by one parametrized test module"
+  },
+  {
+    "id": "TC-TLV-020",
+    "ac": "AC19",
+    "type": "auto",
+    "text": "Given a list tool is called with no limit or a limit above the hard cap, When the response is built, Then the effective page size is clamped (default <=50, hard cap <=200); if the result would exceed the 20,000-character budget, Then the tool truncates and sets has_more=true instead of erroring or silently dropping data.",
+    "tests": [],
+    "notes": "exception/boundary, token economy"
+  },
+  {
+    "id": "TC-TLV-021",
+    "ac": "AC1",
+    "type": "manual",
+    "text": "Against a live Telivy API key, initialize -> tools/list -> telivy_list_external_scans returns that account's real scan list end-to-end.",
+    "steps": [
+      "Obtain a real Telivy Security API key (sandbox or production) for a test account.",
+      "Start the telivy-mcp service locally with that key in the X-Telivy-Api-Key header.",
+      "POST /mcp with method=initialize, then method=tools/list, then method=tools/call for telivy_list_external_scans with no arguments."
+    ],
+    "expect": "tools/list shows all 13 tools; the tools/call response contains the account's real external-scan list (or an empty list if the account has none) with no error envelope.",
+    "result": "untested",
+    "notes": "needs a real vendor account -- not run yet, no test account available. Does not block merge or INT publish per the vendor-mcp SOP's completion criteria."
+  }
+]
