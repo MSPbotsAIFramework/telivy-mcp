@@ -1,5 +1,7 @@
 # PRD-21245 · Code review
 
+Status: frozen @ efdbcc8
+
 ## Round 1 · 2026-10-30 · reviewed dev/PRD-21245 @ db90005 (base main @ 8e03cde)
 
 Verdict: changes requested
@@ -45,3 +47,29 @@ Host: dev02
 | Live smoke test (placeholder credential, no real Telivy account) | started `uv run python -m telivy_mcp` on port 8080 | `GET /health` → `200`; `POST /mcp initialize` (no header) → `401` with the required-headers body; `initialize` with `X-Telivy-Api-Key: placeholder-key` → `200`, `serverInfo.name: "telivy-mcp"`; `tools/list` → `200`, 13 tools, same catalog as round 1; `tools/call telivy_list_external_scans` reached the real Telivy API and got back a real `401`, mapped to `{"error":{"code":"unauthorized","message":"Invalid API Key","retryable":false}}` — consistent with the fix (Telivy's own body here does carry a clean string `"message"` field, so it is forwarded verbatim, as intended) |
 
 No other must-fix items were listed in round 1; no other files were touched.
+
+## Round 2 · 2026-10-30 · reviewed dev/PRD-21245 @ efdbcc8 (base main @ 8e03cde)
+
+Verdict: approved
+
+### Round 1 fixes verified
+
+1. **must-fix 1** (`src/telivy_mcp/api_client.py:144-154`, raw upstream body leak) — confirmed fixed. Re-read the new `_safe_error_message` helper: it only forwards a parsed JSON body's `"message"`/`"error"` field verbatim when that field is a non-empty string; every other shape (non-JSON body, JSON body/list without one of those string fields, e.g. the reviewer's own `{"detail": [...]}` repro) now falls back to one of five fixed generic messages keyed by `_classify`'s `code`. Ran the two new regression tests directly (`uv run pytest -q`, 50 passed) and re-read them: `test_non_json_body_does_not_leak_raw_body` and `test_json_body_without_message_or_error_key_does_not_leak_raw_body` reproduce the exact round-1 repro cases (HTML 502 body with an embedded session id; 422 FastAPI-style `{"detail": [...]}` with an `internal_trace_id`) and assert the planted secrets are absent from `to_envelope()`'s output. `docs/tickets/PRD-21245.ac.json`'s `TC-TLV-019` (AC18) was extended with both new test node ids and updated evidence. No remaining path in `_raise_for_status`/`_safe_error_message` can emit `resp.text` or `str(detail)` verbatim.
+2. **must-fix 2** (`pyproject.toml:28`, undeclared `httpx2` dev dependency) — confirmed fixed. `httpx2` removed from `[dependency-groups] dev`; `uv.lock` re-generated and no longer lists `httpx2` or its transitives (`httpx2-jsfetch`, `httpcore2`, `truststore`). Verified independently: `grep -rn "httpx2" --include=*.py src/ tests/` and `grep -n "httpx2" uv.lock` both empty after `uv sync` in a fresh review worktree.
+
+### New diff this round (`db90005...efdbcc8`)
+
+Scope is exactly the two fixes above: `src/telivy_mcp/api_client.py`, `tests/test_api_client.py` (2 new tests), `pyproject.toml`, `uv.lock`, `docs/tickets/PRD-21245.ac.json` (TC-TLV-019 evidence extended), `docs/tickets/PRD-21245-review.md` (round 1 record). No other files touched, no new tools/params/behavior introduced, no new dependency added.
+
+### Independent verification run this round
+
+| Gate | Command | Result |
+|---|---|---|
+| Unit tests | `uv sync && uv run pytest -q` (fresh worktree) | 50 passed, 0 failed (1 pre-existing, unrelated `StarletteDeprecationWarning` about `httpx` vs. a different third-party `httpx2` package in `starlette.testclient` — not the removed dev dependency, not introduced by this diff, not a failure) |
+| `httpx2` fully gone | `grep -rn "httpx2" --include=*.py src/ tests/`; `grep -n "httpx2" uv.lock` | both empty |
+| Chinese-text scan | `grep -rnP '[\x{4e00}-\x{9fff}]' --exclude-dir=.git --exclude-dir=.venv --exclude=PRD-21245-review.md .` | empty (the only hit without the exclude is this review doc's own Round 1 citation of REVIEW.md §2 BLOCKER 12, not code) |
+| `ac.json` | all 21 cases read | 20 `pass` with evidence, 1 `manual`/`untested` (`TC-TLV-021`, explicitly needs a real vendor account per the SOP's completion criteria — does not block) |
+
+No must-fix found this round.
+
+Host: dev01
